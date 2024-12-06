@@ -1,0 +1,45 @@
+services:
+  tileserver:
+    image: pramsey/pg_tileserv
+    container_name: tileserv_c
+    ports:
+      - "7800:7800"
+    restart: always
+    depends_on:
+      db:
+        condition: service_started
+        restart: true
+      pgadmin:
+        condition: service_started
+        restart: true
+    environment:
+      DATABASE_URL: postgresql://rosemary:harriet@postgis_c:5432/faf
+
+  pgadmin:
+    image: elestio/pgadmin
+    container_name: pgadmin_c
+    ports:
+      - "8080:80"
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: rose.hanuy@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: harriet
+      
+  db:
+    image: postgis/postgis
+    container_name: postgis_c
+    ports:
+      - "5432:5432"
+    restart: always
+    volumes: 
+      - ./postgisData:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: rosemary
+      POSTGRES_DB: faf
+      POSTGRES_PASSWORD: harriet
+
+  
+
+
+
+    

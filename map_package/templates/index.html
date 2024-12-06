@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Display a map</title>
+    <meta property="og:description" content="Initialize a map in an HTML element with MapLibre GL JS." />
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel='stylesheet' href='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css' />
+    <script src='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js'></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        html, body, #map { height: 100%; }
+
+        #info {
+        position: absolute;
+        left: 4rem;
+        Top: 4rem;
+        background: rgba(255, 255, 255, .95);
+        min-height: 10rem;
+        min-width: 10rem;
+
+        padding: 1rem;
+        padding-bottom: 1.5rem;
+        border-style: solid;
+        border-color: gray;
+        border-width: 1px;
+    }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<div id="info">
+    <h1>{{selected_zone}} imports:</h1>
+    {%for i in imports%}
+    <ul>
+        <li>{{i[0]}} from {{i[1]}} locations</li>
+    </ul>
+    {% endfor %}
+</div>
+<script>
+    const map = new maplibregl.Map({
+        container: 'map', // container id
+        style: 'https://api.maptiler.com/maps/topo-v2/style.json?key={{key}}', // style URL
+        center: [0, 0], // starting position [lng, lat]
+        zoom: 1, // starting zoom
+        maplibreLogo: true
+    });
+
+    map.on('load', () => {
+
+        map.addSource(
+            'zones_points', 
+            {
+                type: 'vector',
+                tiles:[
+                    "http://localhost:7800/public.zones_points/{z}/{x}/{y}.pbf"
+                ]
+        });
+
+        map.addLayer({
+            'id': 'zones_points',
+            'type': 'circle',
+            'source': 'zones_points',
+            'source-layer': 'public.zones_points',
+            'paint': {
+                'circle-radius': 3,
+                'circle-color': 'black'
+            }
+        });
+
+        map.addSource(
+            'zones_polys', 
+            {
+                type: 'vector',
+                tiles:[
+                    "http://localhost:7800/public.zones_polys/{z}/{x}/{y}.pbf"
+                ]
+        });
+
+        map.addLayer({
+            'id': 'zones_polys',
+            'type': 'fill',
+            'source': 'zones_polys',
+            'source-layer': 'public.zones_polys',
+            'paint': {
+                'fill-color': 'rgba(200, 100, 240, 0.2)',
+                'fill-outline-color': 'rgba(200, 100, 240, 1)'
+            }
+        });
+
+
+/// Add pop-ups to polygon layer
+
+        var popup = new maplibregl.Popup({
+        closeButton: false,
+        closeOnClick: false
+    });
+
+    map.on('mouseenter', 'zones_polys', function (e) {
+        // Change the cursor style as a UI indicator.
+        map.getCanvas().style.cursor = 'pointer';
+
+        var coordinates = e.features[0].geometry.coordinates.slice();
+
+        var description = "";
+        for (const [key, value] of Object.entries(e.features[0].properties)) {
+          description += `${key}: ${value} <br>`;
+          
+        }
+
+
+        // Ensure that if the map is zoomed out such that multiple
+        // copies of the feature are visible, the popup appears
+        // over the copy being pointed to.
+        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+        }
+
+        // Populate the popup and set its coordinates
+        // based on the feature found.
+        popup.setLngLat(e.lngLat).setHTML(description).addTo(map);
+    });
+
+    map.on('mouseleave', 'zones_polys', function () {
+        map.getCanvas().style.cursor = '';
+        popup.remove();
+    });
+
+    });
+
+
+
+</script>
+</body>
+</html>
